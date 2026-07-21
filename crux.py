@@ -1,46 +1,43 @@
 import requests
 from datetime import date
-from urllib.parse import urlparse
 
+_PSI_URL  = "https://www.googleapis.com/pagespeedonline/v5/runPagespeed"
 _CRUX_URL = "https://chromeuxreport.googleapis.com/v1/records:queryRecord"
-_METRICS = [
-    "largest_contentful_paint",
-    "interaction_to_next_paint",
-    "cumulative_layout_shift",
-]
 
 
-def _query(payload: dict, api_key: str) -> dict | None:
-    resp = requests.post(f"{_CRUX_URL}?key={api_key}", json=payload, timeout=30)
-    if resp.status_code == 404:
-        return None
+def get_collection_end(api_key: str) -> date:
+    """Get CrUX collection period end date via origin-level query."""
+    resp = requests.post(
+        f"{_CRUX_URL}?key={api_key}",
+        json={"origin": "https://pharmeasy.in", "formFactor": "PHONE"},
+        timeout=30,
+    )
     resp.raise_for_status()
-    return resp.json()["record"]
+    last = resp.json()["record"]["collectionPeriod"]["lastDate"]
+    return date(last["year"], last["month"], last["day"])
 
 
-def fetch_cwv(url: str, form_factor: str, api_key: str) -> dict | None:
-    # Try URL-level first, fall back to origin-level (mirrors PSI website behaviour)
-    record = _query({"url": url, "formFactor": form_factor, "metrics": _METRICS}, api_key)
-    if record is None:
-        parsed = urlparse(url)
-        origin = f"{parsed.scheme}://{parsed.netloc}"
-        record = _query({"origin": origin, "formFactor": form_factor, "metrics": _METRICS}, api_key)
-    if record is None:
+def fetch_cwv(url: str, strategy: str, api_key: str) -> dict | None:
+    """Fetch p75 CWV metrics from PSI API. strategy: 'MOBILE' or 'DESKTOP'."""
+    resp = requests.get(
+        _PSI_URL,
+        params={"url": url, "strategy": strategy, "key": api_key},
+        timeout=60,
+    )
+    resp.raise_for_status()
+    metrics = resp.json().get("loadingExperience", {}).get("metrics")
+    if not metrics:
         return None
 
-    metrics = record["metrics"]
-    last = record["collectionPeriod"]["lastDate"]
+    def p75(field: str):
+        return metrics.get(field, {}).get("percentile", "")
 
-    def p75(name: str) -> float | int | str:
-        return metrics.get(name, {}).get("percentiles", {}).get("p75", "")
-
-    lcp_ms = p75("largest_contentful_paint")
-    inp    = p75("interaction_to_next_paint")
-    cls    = p75("cumulative_layout_shift")
+    lcp_ms = p75("LARGEST_CONTENTFUL_PAINT_MS")
+    inp    = p75("INTERACTION_TO_NEXT_PAINT")
+    cls_raw = p75("CUMULATIVE_LAYOUT_SHIFT_SCORE")
 
     return {
         "lcp": round(lcp_ms / 1000, 1) if isinstance(lcp_ms, (int, float)) else "",
         "inp": inp,
-        "cls": cls,
-        "collection_end": date(last["year"], last["month"], last["day"]),
+        "cls": round(cls_raw / 100, 2) if isinstance(cls_raw, (int, float)) else "",
     }

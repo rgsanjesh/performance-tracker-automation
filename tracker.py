@@ -1,12 +1,11 @@
 import json
 import os
-import sys
 
 import gspread
 from google.oauth2.service_account import Credentials
 
 from config import PAGES, SHEET_ID
-from crux import fetch_cwv
+from crux import fetch_cwv, get_collection_end
 from sheet import add_week_headers, compute_label, find_week_col, write_cwv_row
 
 _SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
@@ -19,13 +18,7 @@ def main() -> None:
     creds = Credentials.from_service_account_info(sa_info, scopes=_SCOPES)
     ws = gspread.Client(auth=creds).open_by_key(SHEET_ID).sheet1
 
-    # Collection period is the same across all pages — fetch from first URL
-    first = fetch_cwv(PAGES[0][0], "PHONE", api_key)
-    if not first:
-        print("ERROR: no CrUX data for first page — aborting")
-        sys.exit(1)
-
-    collection_end = first["collection_end"]
+    collection_end = get_collection_end(api_key)
     row1 = ws.row_values(1)
     label, new_col = compute_label(collection_end, row1)
 
@@ -40,7 +33,7 @@ def main() -> None:
     for url, mweb_row, dweb_row in PAGES:
         print(f"  {url}")
 
-        mobile = fetch_cwv(url, "PHONE", api_key)
+        mobile = fetch_cwv(url, "MOBILE", api_key)
         if mobile:
             write_cwv_row(ws, mweb_row, new_col, mobile["lcp"], mobile["inp"], mobile["cls"])
         else:
