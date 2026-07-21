@@ -69,13 +69,12 @@ def write_cwv_row(ws: gspread.Worksheet, sheet_row: int, col: int, lcp, inp, cls
 
 _GREEN = {"red": 39/255,  "green": 78/255, "blue": 19/255}   # Dark green 1 #274E13
 _RED   = {"red": 153/255, "green": 0,       "blue": 0}        # Dark red 1   #990000
-_WHITE = {"red": 1,       "green": 1,       "blue": 1}
-_WHITE_TEXT = {"red": 1,  "green": 1,       "blue": 1}
+_BLACK = {"red": 0,       "green": 0,       "blue": 0}        # default text
 
 
 def _cwv_color(value, metric: str) -> dict:
     if not isinstance(value, (int, float)):
-        return _WHITE
+        return _BLACK
     if metric == "lcp":
         if value <= 2.5:  return _GREEN
         if value > 4.0:   return _RED
@@ -85,16 +84,16 @@ def _cwv_color(value, metric: str) -> dict:
     elif metric == "cls":
         if value <= 0.1:  return _GREEN
         if value > 0.25:  return _RED
-    return _WHITE  # needs improvement — no color
+    return _BLACK  # needs improvement — default text color
 
 
 def color_cwv_row(ws: gspread.Worksheet, sheet_row: int, col: int, lcp, inp, cls) -> None:
     pairs = [(lcp, "lcp"), (inp, "inp"), (cls, "cls")]
-    formats = []
-    for i, (val, metric) in enumerate(pairs):
-        bg = _cwv_color(val, metric)
-        fmt: dict = {"backgroundColor": bg}
-        if bg is not _WHITE:
-            fmt["textFormat"] = {"foregroundColor": _WHITE_TEXT}
-        formats.append({"range": rowcol_to_a1(sheet_row, col + i), "format": fmt})
+    formats = [
+        {
+            "range": rowcol_to_a1(sheet_row, col + i),
+            "format": {"textFormat": {"foregroundColor": _cwv_color(val, metric)}},
+        }
+        for i, (val, metric) in enumerate(pairs)
+    ]
     ws.batch_format(formats)
