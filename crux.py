@@ -21,8 +21,8 @@ def fetch_cwv(url: str, strategy: str, api_key: str) -> dict | None:
     """Fetch p75 CWV metrics from PSI API. strategy: 'MOBILE' or 'DESKTOP'."""
     resp = requests.get(
         _PSI_URL,
-        params={"url": url, "strategy": strategy, "key": api_key},
-        timeout=60,
+        params={"url": url, "strategy": strategy, "key": api_key, "fields": "loadingExperience"},
+        timeout=30,
     )
     resp.raise_for_status()
     metrics = resp.json().get("loadingExperience", {}).get("metrics")
