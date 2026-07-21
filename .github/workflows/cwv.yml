@@ -1,9 +1,9 @@
 name: Core Web Vitals Tracker
 
-on:
+"on":
   schedule:
-    - cron: "0 12 * * 1"   # Monday 12:00 UTC = 5:30 PM IST
-  workflow_dispatch:         # allow manual trigger from GitHub UI
+    - cron: "0 12 * * 1"
+  workflow_dispatch:
 
 jobs:
   track:
