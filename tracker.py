@@ -6,7 +6,7 @@ from google.oauth2.service_account import Credentials
 
 from config import PAGES, SHEET_ID
 from crux import fetch_cwv, get_collection_end
-from sheet import add_week_headers, compute_label, find_week_col, write_cwv_row
+from sheet import add_week_headers, color_cwv_row, compute_label, find_week_col, write_cwv_row
 
 _SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 
@@ -34,17 +34,15 @@ def main() -> None:
         print(f"  {url}")
 
         mobile = fetch_cwv(url, "MOBILE", api_key)
-        if mobile:
-            write_cwv_row(ws, mweb_row, new_col, mobile["lcp"], mobile["inp"], mobile["cls"])
-        else:
-            write_cwv_row(ws, mweb_row, new_col, "", "", "")
+        m = mobile or {"lcp": "", "inp": "", "cls": ""}
+        write_cwv_row(ws, mweb_row, new_col, m["lcp"], m["inp"], m["cls"])
+        color_cwv_row(ws, mweb_row, new_col, m["lcp"], m["inp"], m["cls"])
 
         if dweb_row is not None:
             desktop = fetch_cwv(url, "DESKTOP", api_key)
-            if desktop:
-                write_cwv_row(ws, dweb_row, new_col, desktop["lcp"], desktop["inp"], desktop["cls"])
-            else:
-                write_cwv_row(ws, dweb_row, new_col, "", "", "")
+            d = desktop or {"lcp": "", "inp": "", "cls": ""}
+            write_cwv_row(ws, dweb_row, new_col, d["lcp"], d["inp"], d["cls"])
+            color_cwv_row(ws, dweb_row, new_col, d["lcp"], d["inp"], d["cls"])
 
     print("Done.")
 
