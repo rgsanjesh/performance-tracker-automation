@@ -1,0 +1,24 @@
+name: Core Web Vitals Tracker
+
+on:
+  schedule:
+    - cron: "0 12 * * 1"   # Monday 12:00 UTC = 5:30 PM IST
+  workflow_dispatch:         # allow manual trigger from GitHub UI
+
+jobs:
+  track:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - run: pip install -r requirements.txt
+
+      - run: python tracker.py
+        env:
+          PSI_API_KEY: ${{ secrets.PSI_API_KEY }}
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
