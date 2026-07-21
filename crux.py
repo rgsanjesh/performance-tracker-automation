@@ -24,7 +24,9 @@ def fetch_cwv(url: str, strategy: str, api_key: str) -> dict | None:
         params={"url": url, "strategy": strategy, "key": api_key},
         timeout=60,
     )
-    resp.raise_for_status()
+    if not resp.ok:
+        print(f"  PSI {resp.status_code} for {url} ({strategy}) — skipping")
+        return None
     metrics = resp.json().get("loadingExperience", {}).get("metrics")
     if not metrics:
         return None
