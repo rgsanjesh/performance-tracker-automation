@@ -4,12 +4,11 @@ from datetime import date
 _CRUX_HISTORY = "https://chromeuxreport.googleapis.com/v1/records:queryHistoryRecord"
 
 
-def _query(url: str, form_factor: str, api_key: str) -> dict | None:
-    resp = requests.post(
-        f"{_CRUX_HISTORY}?key={api_key}",
-        json={"url": url, "formFactor": form_factor, "collectionPeriodCount": 2},
-        timeout=15,
-    )
+def _query(url: str, form_factor: str | None, api_key: str) -> dict | None:
+    body: dict = {"url": url, "collectionPeriodCount": 2}
+    if form_factor:
+        body["formFactor"] = form_factor
+    resp = requests.post(f"{_CRUX_HISTORY}?key={api_key}", json=body, timeout=15)
     if resp.status_code == 404:
         return None
     resp.raise_for_status()
@@ -21,6 +20,11 @@ def _fetch_record(url: str, form_factor: str, api_key: str) -> dict | None:
     record = _query(url, form_factor, api_key)
     if record is None and url.endswith("/"):
         record = _query(url.rstrip("/"), form_factor, api_key)
+    # No form-factor-specific data — fall back to all-devices (mirrors PSI website behaviour)
+    if record is None:
+        record = _query(url, None, api_key)
+    if record is None and url.endswith("/"):
+        record = _query(url.rstrip("/"), None, api_key)
     return record
 
 
