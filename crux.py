@@ -19,15 +19,19 @@ def get_collection_end(api_key: str) -> date:
 
 def fetch_cwv(url: str, strategy: str, api_key: str) -> dict | None:
     """Fetch p75 CWV metrics from PSI API. strategy: 'MOBILE' or 'DESKTOP'."""
-    try:
-        resp = requests.get(
-            _PSI_URL,
-            params={"url": url, "strategy": strategy, "key": api_key},
-            timeout=60,
-        )
-    except requests.exceptions.Timeout:
-        print(f"  PSI timeout for {url} ({strategy}) — skipping")
-        return None
+    for attempt in range(3):
+        try:
+            resp = requests.get(
+                _PSI_URL,
+                params={"url": url, "strategy": strategy, "key": api_key},
+                timeout=60,
+            )
+            break
+        except requests.exceptions.Timeout:
+            if attempt == 2:
+                print(f"  PSI timeout for {url} ({strategy}) after 3 attempts — skipping")
+                return None
+            print(f"  PSI timeout for {url} ({strategy}) — retrying...")
     if not resp.ok:
         print(f"  PSI {resp.status_code} for {url} ({strategy}) — skipping")
         return None
