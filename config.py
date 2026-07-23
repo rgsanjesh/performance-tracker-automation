@@ -11,11 +11,11 @@ PAGES: list[tuple[str, str, int, int | None]] = [
     ("https://pharmeasy.in/online-medicine-order",                                                                  "Order Medicine",   7,  21),
     ("https://pharmeasy.in/health-care/",                                                                           "OTC Landing",      8,  22),
     ("https://pharmeasy.in/health-care/skin-care-93/",                                                             "OTC Listing",      9,  23),
-    ("https://pharmeasy.in/health-care/products/prega-news-pregnancy-test-kit-177505",                             "OTC PDP",          10, 24),
+    ("https://pharmeasy.in/health-care/products/pharmeasy-multivitamin-women---bottle-of-60-3662202",                             "OTC PDP",          10, 24),
     ("https://pharmeasy.in/offers",                                                                                 "Offers",           11, 25),
     ("https://pharmeasy.in/diagnostics/profile/complete-blood-count-cbc-408",                                      "Dx Profile",       12, 26),
     ("https://pharmeasy.in/diagnostics/packages/comprehensive-full-body-checkup-test-with-vitamin-d-and-b12-2142", "Dx Package",       13, 27),
     ("https://pharmeasy.in/diagnostics/tests/vitamin-b12-154",                                                     "Dx Test",          14, 28),
     ("https://pharmeasy.in/diag-pwa/cart",                                                                         "Dx Cart",          15, 29),
-    ("https://pharmeasy.in/diagnostics/tests/culture-urine-62/mumbai-166",                                                                      "Dx Tests",         16, 30),
+    ("https://pharmeasy.in/diagnostics/tests/culture-urine-62/mumbai-166",                                                                      "Dx Tests",         16, None),
 ]
