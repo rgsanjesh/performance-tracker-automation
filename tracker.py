@@ -48,7 +48,7 @@ def main() -> None:
             write_cwv_row(ws, dweb_row, new_col, d["lcp"], d["inp"], d["cls"])
             color_cwv_row(ws, dweb_row, new_col, d["lcp"], d["inp"], d["cls"])
 
-        notify_results.append({"name": name, "mobile": mobile, "desktop": desktop})
+        notify_results.append({"name": name, "url": url, "mobile": mobile, "desktop": desktop})
 
     send_report(label, notify_results)
     print("Done.")

@@ -39,38 +39,61 @@ def send_report(label: str, results: list[dict]) -> None:
 
     for r in results:
         name = r["name"]
+        url  = r["url"]
+        link = f'<a href="{url}">{name}</a>'
+
         for device, cwv in (("mWeb", r["mobile"]), ("dWeb", r["desktop"])):
             if cwv is None:
                 continue
             for metric in ("lcp", "inp", "cls"):
                 curr = cwv.get(metric)
                 prev = cwv.get(f"prev_{metric}")
-                tag = f"[{device}] {name} — {metric.upper()} {_fmt(curr, metric)}"
-                if _is_poor(curr, metric):
-                    danger.append(f"{tag}  (limit: {_fmt(_POOR[metric], metric)})")
-                elif _is_regressing(curr, prev, metric):
-                    if metric == "cls":
-                        delta = f"+{round(curr - prev, 2)}"
-                    else:
-                        delta = f"+{round((curr / prev - 1) * 100)}%"
-                    regressing.append(f"{tag}  (was {_fmt(prev, metric)}, {delta})")
+                tag  = f"🔴 <b>[{device}]</b> {link} — {metric.upper()} <b>{_fmt(curr, metric)}</b>"
 
-    lines = [f"*CWV Report — {label}*", ""]
+                if _is_poor(curr, metric):
+                    danger.append(f"{tag}  <i>(limit: {_fmt(_POOR[metric], metric)})</i>")
+                elif _is_regressing(curr, prev, metric):
+                    delta = (
+                        f"+{round(curr - prev, 2)}"
+                        if metric == "cls"
+                        else f"+{round((curr / prev - 1) * 100)}%"
+                    )
+                    regressing.append(
+                        f"⚠️ <b>[{device}]</b> {link} — {metric.upper()} <b>{_fmt(curr, metric)}</b>"
+                        f"  <i>(was {_fmt(prev, metric)}, {delta})</i>"
+                    )
+
+    sections: list[dict] = []
 
     if danger:
-        lines.append("DANGER (poor — act now):")
-        lines += [f"  • {d}" for d in danger]
-    else:
-        lines.append("No poor scores this week.")
-
-    lines.append("")
+        sections.append({
+            "header": "🚨  DANGER — Poor Scores (Act Now)",
+            "widgets": [{"textParagraph": {"text": "<br>".join(danger)}}],
+        })
 
     if regressing:
-        lines.append("REGRESSING vs last week:")
-        lines += [f"  • {r}" for r in regressing]
-    else:
-        lines.append("No regressions vs last week.")
+        sections.append({
+            "header": "📉  Regressing vs Last Week",
+            "widgets": [{"textParagraph": {"text": "<br>".join(regressing)}}],
+        })
 
-    resp = requests.post(webhook_url, json={"text": "\n".join(lines)}, timeout=10)
+    if not danger and not regressing:
+        sections.append({
+            "widgets": [{"textParagraph": {
+                "text": "✅  <b>All pages are within good thresholds. No regressions vs last week.</b>"
+            }}],
+        })
+
+    payload = {
+        "cards": [{
+            "header": {
+                "title":    f"📊  CWV Report — {label}",
+                "subtitle": "Core Web Vitals · pharmeasy.in",
+            },
+            "sections": sections,
+        }]
+    }
+
+    resp = requests.post(webhook_url, json=payload, timeout=10)
     resp.raise_for_status()
     print("Google Chat notification sent.")
