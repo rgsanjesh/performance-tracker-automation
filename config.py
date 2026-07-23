@@ -14,9 +14,9 @@ PAGES: list[tuple[str, int, int | None]] = [
     ("https://pharmeasy.in/health-care/products/prega-news-pregnancy-test-kit-177505",          10, 24),  # OTC PDP         <- fill correct URL
     ("https://pharmeasy.in/offers",                         11, 25),  # Offers
     # --- mWeb-Diagnostics rows 12-16 / DWeb-Diagnostics rows 26-29 ---
-    ("https://pharmeasy.in/diagnostics/profile/408",        12, 26),  # Dx PDP Profile-408
-    ("https://pharmeasy.in/diagnostics/package/2142",       13, 27),  # Dx PDP Package-2142
-    ("https://pharmeasy.in/diagnostics/test/154",           14, 28),  # Dx PDP Test-154
-    ("https://pharmeasy.in/diagnostics/cart",               15, 29),  # Dx Cart
+    ("https://pharmeasy.in/diagnostics/profile/complete-blood-count-cbc-408",        12, 26),  # Dx PDP Profile-408
+    ("https://pharmeasy.in/diagnostics/packages/comprehensive-full-body-checkup-test-with-vitamin-d-and-b12-2142",       13, 27),  # Dx PDP Package-2142
+    ("https://pharmeasy.in/diagnostics/tests/vitamin-b12-154",           14, 28),  # Dx PDP Test-154
+    ("https://pharmeasy.in/diag-pwa/cart",               15, 29),  # Dx Cart
     ("https://pharmeasy.in/diagnostics/tests",              16, None), # Dx Tests Local (mobile only)
 ]

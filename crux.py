@@ -1,53 +1,54 @@
 import requests
 from datetime import date
 
-_PSI_URL  = "https://www.googleapis.com/pagespeedonline/v5/runPagespeed"
-_CRUX_URL = "https://chromeuxreport.googleapis.com/v1/records:queryRecord"
+_CRUX_HISTORY = "https://chromeuxreport.googleapis.com/v1/records:queryHistoryRecord"
+
+
+def _query(url: str, form_factor: str, api_key: str) -> dict | None:
+    resp = requests.post(
+        f"{_CRUX_HISTORY}?key={api_key}",
+        json={"url": url, "formFactor": form_factor, "collectionPeriodCount": 1},
+        timeout=15,
+    )
+    if resp.status_code == 404:
+        return None
+    resp.raise_for_status()
+    return resp.json()["record"]
+
+
+def _fetch_record(url: str, form_factor: str, api_key: str) -> dict | None:
+    # CrUX History API is strict about trailing slashes — try both
+    record = _query(url, form_factor, api_key)
+    if record is None and url.endswith("/"):
+        record = _query(url.rstrip("/"), form_factor, api_key)
+    return record
 
 
 def get_collection_end(api_key: str) -> date:
-    """Get CrUX collection period end date via origin-level query."""
-    resp = requests.post(
-        f"{_CRUX_URL}?key={api_key}",
-        json={"origin": "https://pharmeasy.in", "formFactor": "PHONE"},
-        timeout=30,
-    )
-    resp.raise_for_status()
-    last = resp.json()["record"]["collectionPeriod"]["lastDate"]
+    record = _fetch_record("https://pharmeasy.in/", "PHONE", api_key)
+    last = record["collectionPeriods"][-1]["lastDate"]
     return date(last["year"], last["month"], last["day"])
 
 
 def fetch_cwv(url: str, strategy: str, api_key: str) -> dict | None:
-    """Fetch p75 CWV metrics from PSI API. strategy: 'MOBILE' or 'DESKTOP'."""
-    for attempt in range(3):
-        try:
-            resp = requests.get(
-                _PSI_URL,
-                params={"url": url, "strategy": strategy, "key": api_key},
-                timeout=90,
-            )
-            break
-        except requests.exceptions.Timeout:
-            if attempt == 2:
-                print(f"  PSI timeout for {url} ({strategy}) after 3 attempts — skipping")
-                return None
-            print(f"  PSI timeout for {url} ({strategy}) — retrying...")
-    if not resp.ok:
-        print(f"  PSI {resp.status_code} for {url} ({strategy}) — skipping")
-        return None
-    metrics = resp.json().get("loadingExperience", {}).get("metrics")
-    if not metrics:
+    form_factor = "PHONE" if strategy == "MOBILE" else "DESKTOP"
+    record = _fetch_record(url, form_factor, api_key)
+    if record is None:
+        print(f"  no CrUX data for {url} ({strategy}) — skipping")
         return None
 
-    def p75(field: str):
-        return metrics.get(field, {}).get("percentile", "")
+    metrics = record["metrics"]
 
-    lcp_ms = p75("LARGEST_CONTENTFUL_PAINT_MS")
-    inp    = p75("INTERACTION_TO_NEXT_PAINT")
-    cls_raw = p75("CUMULATIVE_LAYOUT_SHIFT_SCORE")
+    def p75(name: str):
+        vals = metrics.get(name, {}).get("percentilesTimeseries", {}).get("p75s", [])
+        return vals[-1] if vals else None
+
+    lcp_ms  = p75("largest_contentful_paint")
+    inp     = p75("interaction_to_next_paint")
+    cls_val = p75("cumulative_layout_shift")
 
     return {
         "lcp": round(lcp_ms / 1000, 1) if isinstance(lcp_ms, (int, float)) else "",
-        "inp": inp,
-        "cls": round(cls_raw / 100, 2) if isinstance(cls_raw, (int, float)) else "",
+        "inp": inp if isinstance(inp, (int, float)) else "",
+        "cls": round(float(cls_val), 2) if cls_val not in (None, "") else "",
     }
