@@ -6,6 +6,7 @@ from google.oauth2.service_account import Credentials
 
 from config import PAGES, SHEET_ID
 from crux import fetch_cwv, get_collection_end
+from notify import send_report
 from sheet import add_week_headers, color_cwv_row, compute_label, find_week_col, write_cwv_row
 
 _SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
@@ -30,7 +31,9 @@ def main() -> None:
         print(f"Adding new week column: {label}")
         add_week_headers(ws, label, new_col)
 
-    for url, mweb_row, dweb_row in PAGES:
+    notify_results = []
+
+    for url, name, mweb_row, dweb_row in PAGES:
         print(f"  {url}")
 
         mobile = fetch_cwv(url, "MOBILE", api_key)
@@ -38,12 +41,16 @@ def main() -> None:
         write_cwv_row(ws, mweb_row, new_col, m["lcp"], m["inp"], m["cls"])
         color_cwv_row(ws, mweb_row, new_col, m["lcp"], m["inp"], m["cls"])
 
+        desktop = None
         if dweb_row is not None:
             desktop = fetch_cwv(url, "DESKTOP", api_key)
             d = desktop or {"lcp": "", "inp": "", "cls": ""}
             write_cwv_row(ws, dweb_row, new_col, d["lcp"], d["inp"], d["cls"])
             color_cwv_row(ws, dweb_row, new_col, d["lcp"], d["inp"], d["cls"])
 
+        notify_results.append({"name": name, "mobile": mobile, "desktop": desktop})
+
+    send_report(label, notify_results)
     print("Done.")
 
 

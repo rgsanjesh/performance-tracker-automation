@@ -7,7 +7,7 @@ _CRUX_HISTORY = "https://chromeuxreport.googleapis.com/v1/records:queryHistoryRe
 def _query(url: str, form_factor: str, api_key: str) -> dict | None:
     resp = requests.post(
         f"{_CRUX_HISTORY}?key={api_key}",
-        json={"url": url, "formFactor": form_factor, "collectionPeriodCount": 1},
+        json={"url": url, "formFactor": form_factor, "collectionPeriodCount": 2},
         timeout=15,
     )
     if resp.status_code == 404:
@@ -39,16 +39,21 @@ def fetch_cwv(url: str, strategy: str, api_key: str) -> dict | None:
 
     metrics = record["metrics"]
 
-    def p75(name: str):
+    def p75(name: str, idx: int = -1):
         vals = metrics.get(name, {}).get("percentilesTimeseries", {}).get("p75s", [])
-        return vals[-1] if vals else None
+        if not vals or abs(idx) > len(vals):
+            return None
+        return vals[idx]
 
-    lcp_ms  = p75("largest_contentful_paint")
-    inp     = p75("interaction_to_next_paint")
-    cls_val = p75("cumulative_layout_shift")
+    def to_lcp(v): return round(v / 1000, 1) if isinstance(v, (int, float)) else None
+    def to_inp(v): return v if isinstance(v, (int, float)) else None
+    def to_cls(v): return round(float(v), 2) if v not in (None, "") else None
 
     return {
-        "lcp": round(lcp_ms / 1000, 1) if isinstance(lcp_ms, (int, float)) else "",
-        "inp": inp if isinstance(inp, (int, float)) else "",
-        "cls": round(float(cls_val), 2) if cls_val not in (None, "") else "",
+        "lcp":      to_lcp(p75("largest_contentful_paint")) or "",
+        "inp":      to_inp(p75("interaction_to_next_paint")) or "",
+        "cls":      to_cls(p75("cumulative_layout_shift")) or "",
+        "prev_lcp": to_lcp(p75("largest_contentful_paint", -2)),
+        "prev_inp": to_inp(p75("interaction_to_next_paint", -2)),
+        "prev_cls": to_cls(p75("cumulative_layout_shift", -2)),
     }
