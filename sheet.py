@@ -67,9 +67,12 @@ def write_cwv_row(ws: gspread.Worksheet, sheet_row: int, col: int, lcp, inp, cls
     }])
 
 
-_GREEN = {"red": 39/255,  "green": 78/255, "blue": 19/255}   # Dark green 1 #274E13
-_RED   = {"red": 153/255, "green": 0,       "blue": 0}        # Dark red 1   #990000
-_BLACK = {"red": 0,       "green": 0,       "blue": 0}        # default text
+def _rgb(r: int, g: int, b: int) -> dict:
+    return {"rgbColor": {"red": r / 255, "green": g / 255, "blue": b / 255}}
+
+_GREEN = _rgb(39,  78, 19)   # Dark green 1 #274E13
+_RED   = _rgb(153,  0,  0)   # Dark red 1   #990000
+_BLACK = _rgb(0,    0,  0)   # default text
 
 
 def _cwv_color(value, metric: str) -> dict:
@@ -88,7 +91,8 @@ def color_cwv_row(ws: gspread.Worksheet, sheet_row: int, col: int, lcp, inp, cls
     formats = [
         {
             "range": rowcol_to_a1(sheet_row, col + i),
-            "format": {"textFormat": {"foregroundColor": _cwv_color(val, metric)}},
+            # foregroundColor is deprecated — foregroundColorStyle is required by the Sheets API
+            "format": {"textFormat": {"foregroundColorStyle": _cwv_color(val, metric)}},
         }
         for i, (val, metric) in enumerate(pairs)
     ]
