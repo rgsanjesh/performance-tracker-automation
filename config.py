@@ -17,5 +17,5 @@ PAGES: list[tuple[str, str, int, int | None]] = [
     ("https://pharmeasy.in/diagnostics/packages/comprehensive-full-body-checkup-test-with-vitamin-d-and-b12-2142", "Dx Package",       13, 27),
     ("https://pharmeasy.in/diagnostics/tests/vitamin-b12-154",                                                     "Dx Test",          14, 28),
     ("https://pharmeasy.in/diag-pwa/cart",                                                                         "Dx Cart",          15, 29),
-    ("https://pharmeasy.in/diagnostics/tests",                                                                      "Dx Tests",         16, None),
+    ("https://pharmeasy.in/diagnostics/tests/culture-urine-62/mumbai-166",                                                                      "Dx Tests",         16, 30),
 ]
