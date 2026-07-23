@@ -75,16 +75,12 @@ _BLACK = {"red": 0,       "green": 0,       "blue": 0}        # default text
 def _cwv_color(value, metric: str) -> dict:
     if not isinstance(value, (int, float)):
         return _BLACK
-    if metric == "lcp":
-        if value <= 2.5:  return _GREEN
-        if value > 4.0:   return _RED
-    elif metric == "inp":
-        if value <= 200:  return _GREEN
-        if value > 500:   return _RED
-    elif metric == "cls":
-        if value <= 0.1:  return _GREEN
-        if value > 0.25:  return _RED
-    return _BLACK  # needs improvement — default text color
+    good = (
+        (metric == "lcp" and value <= 2.5) or
+        (metric == "inp" and value <= 200) or
+        (metric == "cls" and value <= 0.1)
+    )
+    return _GREEN if good else _RED
 
 
 def color_cwv_row(ws: gspread.Worksheet, sheet_row: int, col: int, lcp, inp, cls) -> None:
