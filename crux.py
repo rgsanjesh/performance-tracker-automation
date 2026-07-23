@@ -49,10 +49,12 @@ def fetch_cwv(url: str, strategy: str, api_key: str) -> dict | None:
     def to_inp(v): return v if isinstance(v, (int, float)) else None
     def to_cls(v): return round(float(v), 2) if v not in (None, "") else None
 
+    def blank(v): return v if v is not None else ""
+
     return {
-        "lcp":      to_lcp(p75("largest_contentful_paint")) or "",
-        "inp":      to_inp(p75("interaction_to_next_paint")) or "",
-        "cls":      to_cls(p75("cumulative_layout_shift")) or "",
+        "lcp":      blank(to_lcp(p75("largest_contentful_paint"))),
+        "inp":      blank(to_inp(p75("interaction_to_next_paint"))),
+        "cls":      blank(to_cls(p75("cumulative_layout_shift"))),
         "prev_lcp": to_lcp(p75("largest_contentful_paint", -2)),
         "prev_inp": to_inp(p75("interaction_to_next_paint", -2)),
         "prev_cls": to_cls(p75("cumulative_layout_shift", -2)),
