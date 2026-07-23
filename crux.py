@@ -24,7 +24,7 @@ def fetch_cwv(url: str, strategy: str, api_key: str) -> dict | None:
             resp = requests.get(
                 _PSI_URL,
                 params={"url": url, "strategy": strategy, "key": api_key},
-                timeout=60,
+                timeout=90,
             )
             break
         except requests.exceptions.Timeout:
