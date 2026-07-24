@@ -87,9 +87,8 @@ def _cwv_color(value, metric: str) -> dict:
 
 
 def color_cwv_row(ws: gspread.Worksheet, sheet_row: int, col: int, lcp, inp, cls) -> None:
+    import json
     pairs = [(lcp, "lcp"), (inp, "inp"), (cls, "cls")]
-    # gspread's batch_format generates fields="userEnteredFormat(textFormat)" which the
-    # Sheets API ignores for foregroundColor. Must use dot-notation and call batchUpdate directly.
     requests = [
         {
             "repeatCell": {
@@ -100,4 +99,9 @@ def color_cwv_row(ws: gspread.Worksheet, sheet_row: int, col: int, lcp, inp, cls
         }
         for i, (val, metric) in enumerate(pairs)
     ]
-    ws._spreadsheet.batch_update({"requests": requests})
+    print(f"  [color] sheet_row={sheet_row} ws.id={ws.id} request={json.dumps(requests[0]['repeatCell']['range'])} colors={[_cwv_color(v,m) for v,m in pairs]}")
+    try:
+        result = ws._spreadsheet.batch_update({"requests": requests})
+        print(f"  [color] response={result}")
+    except Exception as e:
+        print(f"  [color] ERROR: {e}")
