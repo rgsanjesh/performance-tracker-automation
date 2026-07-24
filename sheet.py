@@ -110,7 +110,7 @@ def set_week_cf_rules(ws: gspread.Worksheet, col: int) -> None:
             "endColumnIndex":   col + col_offset,
             "sheetId":          ws.id,
         }
-        for cond_type, color in [(good_cond, _GREEN), ("NUMBER_GREATER_THAN", _RED)]:
+        for cond_type, color in [(good_cond, _GREEN), ("NUMBER_GREATER", _RED)]:
             requests.append({
                 "addConditionalFormatRule": {
                     "rule": {
