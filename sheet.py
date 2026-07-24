@@ -2,7 +2,7 @@ import re
 from datetime import date, datetime, timedelta
 
 import gspread
-from gspread.utils import rowcol_to_a1
+from gspread.utils import rowcol_to_a1, a1_range_to_grid_range
 
 _DATE_RE = re.compile(r'^[A-Za-z]+ \d{1,2} - [A-Za-z]+ \d{1,2}$')
 
@@ -68,7 +68,7 @@ def write_cwv_row(ws: gspread.Worksheet, sheet_row: int, col: int, lcp, inp, cls
 
 
 def _rgb(r: int, g: int, b: int) -> dict:
-    return {"rgbColor": {"red": r / 255, "green": g / 255, "blue": b / 255}}
+    return {"red": r / 255, "green": g / 255, "blue": b / 255}
 
 _GREEN = _rgb(39,  78, 19)   # Dark green 1 #274E13
 _RED   = _rgb(153,  0,  0)   # Dark red 1   #990000
@@ -88,12 +88,16 @@ def _cwv_color(value, metric: str) -> dict:
 
 def color_cwv_row(ws: gspread.Worksheet, sheet_row: int, col: int, lcp, inp, cls) -> None:
     pairs = [(lcp, "lcp"), (inp, "inp"), (cls, "cls")]
-    formats = [
+    # gspread's batch_format generates fields="userEnteredFormat(textFormat)" which the
+    # Sheets API ignores for foregroundColor. Must use dot-notation and call batchUpdate directly.
+    requests = [
         {
-            "range": rowcol_to_a1(sheet_row, col + i),
-            # foregroundColor is deprecated — foregroundColorStyle is required by the Sheets API
-            "format": {"textFormat": {"foregroundColorStyle": _cwv_color(val, metric)}},
+            "repeatCell": {
+                "range": a1_range_to_grid_range(rowcol_to_a1(sheet_row, col + i), ws.id),
+                "cell": {"userEnteredFormat": {"textFormat": {"foregroundColor": _cwv_color(val, metric)}}},
+                "fields": "userEnteredFormat.textFormat.foregroundColor",
+            }
         }
         for i, (val, metric) in enumerate(pairs)
     ]
-    ws.batch_format(formats)
+    ws._spreadsheet.batch_update({"requests": requests})
