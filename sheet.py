@@ -72,32 +72,63 @@ def _rgb(r: int, g: int, b: int) -> dict:
 
 _GREEN = _rgb(39,  78, 19)   # Dark green 1 #274E13
 _RED   = _rgb(153,  0,  0)   # Dark red 1   #990000
-_BLACK = _rgb(0,    0,  0)   # default text
+
+# Data rows in the sheet: mweb rows 3-16, dweb rows 17-29 (1-indexed)
+_DATA_ROW_START = 2   # 0-indexed (= sheet row 3)
+_DATA_ROW_END   = 29  # 0-indexed exclusive (= sheet rows up to and including 29)
 
 
-def _cwv_color(value, metric: str) -> dict:
-    if not isinstance(value, (int, float)):
-        return _BLACK
-    good = (
-        (metric == "lcp" and value <= 2.5) or
-        (metric == "inp" and value <= 200) or
-        (metric == "cls" and value <= 0.1)
+def debug_cf_rules(ws: gspread.Worksheet) -> None:
+    resp = ws._spreadsheet.client.request(
+        "GET",
+        f"https://sheets.googleapis.com/v4/spreadsheets/{ws._spreadsheet.id}",
+        params={"fields": "sheets.properties,sheets.conditionalFormats", "includeGridData": False},
     )
-    return _GREEN if good else _RED
+    for sheet in resp.json().get("sheets", []):
+        rules = sheet.get("conditionalFormats", [])
+        title = sheet["properties"]["title"]
+        print(f"  [CF] '{title}' has {len(rules)} conditional format rule(s)")
+        for i, rule in enumerate(rules[:3]):
+            print(f"    CF[{i}]: {rule}")
 
 
-def color_cwv_row(ws: gspread.Worksheet, sheet_row: int, col: int, lcp, inp, cls) -> None:
-    pairs = [(lcp, "lcp"), (inp, "inp"), (cls, "cls")]
-    # foregroundColorStyle takes precedence over foregroundColor in the Sheets API.
-    # Must set foregroundColorStyle with explicit dot-notation fields mask.
-    requests = [
-        {
-            "repeatCell": {
-                "range": a1_range_to_grid_range(rowcol_to_a1(sheet_row, col + i), ws.id),
-                "cell": {"userEnteredFormat": {"textFormat": {"foregroundColorStyle": {"rgbColor": _cwv_color(val, metric)}}}},
-                "fields": "userEnteredFormat.textFormat.foregroundColorStyle",
-            }
-        }
-        for i, (val, metric) in enumerate(pairs)
+def set_week_cf_rules(ws: gspread.Worksheet, col: int) -> None:
+    """Replace cell-level coloring with conditional formatting rules (CF wins over userEnteredFormat)."""
+    # (col_offset from LCP, good-threshold, condition for good)
+    specs = [
+        (0, 2.5,  "NUMBER_LESS_THAN_EQ"),   # LCP ≤ 2.5 → green
+        (1, 200,  "NUMBER_LESS_THAN_EQ"),   # INP ≤ 200 → green
+        (2, 0.1,  "NUMBER_LESS_THAN_EQ"),   # CLS ≤ 0.1 → green
     ]
+
+    requests = []
+    for col_offset, threshold, good_cond in specs:
+        rng = {
+            "startRowIndex":    _DATA_ROW_START,
+            "endRowIndex":      _DATA_ROW_END,
+            "startColumnIndex": col + col_offset - 1,   # 0-indexed
+            "endColumnIndex":   col + col_offset,
+            "sheetId":          ws.id,
+        }
+        for cond_type, color in [(good_cond, _GREEN), ("NUMBER_GREATER_THAN", _RED)]:
+            requests.append({
+                "addConditionalFormatRule": {
+                    "rule": {
+                        "ranges": [rng],
+                        "booleanRule": {
+                            "condition": {
+                                "type":   cond_type,
+                                "values": [{"userEnteredValue": str(threshold)}],
+                            },
+                            "format": {
+                                "textFormat": {
+                                    "foregroundColorStyle": {"rgbColor": color}
+                                }
+                            },
+                        },
+                    },
+                    "index": 0,  # insert at highest priority, above any existing rules
+                }
+            })
+
     ws._spreadsheet.batch_update({"requests": requests})
